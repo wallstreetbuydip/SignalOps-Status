@@ -13,7 +13,7 @@ function default_signalops_config(): array
             'demo' => filter_var(getenv('SIGNALOPS_DEMO') ?: 'true', FILTER_VALIDATE_BOOLEAN),
             'theme' => [
                 'accent' => '#20b981',
-                'repository_url' => 'https://github.com/wallstreetbuydip/SignalOps-Status',
+                'repository_url' => 'https://github.com/tuolaji996/SignalOps-Status',
                 'owner_name' => 'SignalOps',
                 'owner_url' => '',
             ],

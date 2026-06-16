@@ -7,7 +7,7 @@ return [
         'demo' => false,
         'theme' => [
             'accent' => '#20b981',
-            'repository_url' => 'https://github.com/wallstreetbuydip/SignalOps-Status',
+            'repository_url' => 'https://github.com/tuolaji996/SignalOps-Status',
             'owner_name' => 'Your Team',
             'owner_url' => 'https://example.com',
         ],
