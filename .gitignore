@@ -1,0 +1,13 @@
+.env
+config/signalops.php
+var/
+*.log
+*.key
+*.pem
+*.bak
+*.tmp
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
