@@ -142,6 +142,8 @@ Then add a Cloudflare Cache Rule for only the status hostname:
 
 When enabled, SignalOps sends `Cache-Control`, `CDN-Cache-Control`, and `Cloudflare-CDN-Cache-Control` headers with short edge TTLs and stale-if-error protection.
 
+See [docs/cloudflare-cache-rules.md](docs/cloudflare-cache-rules.md) for the full Cloudflare setup, including the exact Cache Rule and verification commands.
+
 ## Security Notes
 
 - Do not commit `config/signalops.php`, `/etc/signalops-status/config.php`, SSH keys, tokens, hostnames, or generated state files.
