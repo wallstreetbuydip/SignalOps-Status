@@ -4,6 +4,8 @@
 
 SignalOps Status is a self-hosted operations page for teams that run Discord alert bots, trading or market-data APIs, archival databases, and small private fleets. It is built with plain PHP, ships with a full demo mode, and can be dropped onto a normal PHP hosting panel without a JavaScript build step.
 
+Search keywords: PHP Based status page, self-hosted status dashboard, Discord bot monitoring, server monitoring dashboard, uptime monitoring, NOC dashboard, trading bot status page, market data API status, Tailscale server status, Cloudflare cacheable status page.
+
 ![SignalOps Status screenshot](docs/screenshot.png)
 
 The default interface uses a dark NOC-style console, with a built-in Light/Dark toggle for communities that need a brighter embed or landing-page look.
