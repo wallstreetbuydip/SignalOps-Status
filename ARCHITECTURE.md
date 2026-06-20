@@ -2,6 +2,8 @@
 
 SignalOps Status is a small PHP application that renders a public status surface from private operational signals. It favors simple deployment and careful redaction over heavy metrics storage.
 
+The frontend is rendered server-side by PHP. A small static JavaScript file handles the interactive latency map and the browser-local Light/Dark theme toggle; there is no build step or framework runtime.
+
 ```mermaid
 flowchart TB
   classDef service fill:#eef2ff,stroke:#6366f1,stroke-width:1px,color:#111827

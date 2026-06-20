@@ -103,6 +103,16 @@ function percent($value): string
     return $value === null ? 'n/a' : number_format((float)$value, 1) . '%';
 }
 
+function compact_percent($value): string
+{
+    if ($value === null) {
+        return 'n/a';
+    }
+
+    $number = (float)$value;
+    return number_format($number, abs($number - round($number)) < 0.05 ? 0 : 1) . '%';
+}
+
 function sla_percent($value): string
 {
     return $value === null ? 'n/a' : number_format((float)$value, 2) . '%';
@@ -176,6 +186,17 @@ function gauge(string $label, $pct, string $hint = ''): string
         . '<div class="gauge-ring"><strong>' . h(percent($pct)) . '</strong></div>'
         . '<span>' . h($label) . '</span>'
         . ($hint !== '' ? '<small>' . h($hint) . '</small>' : '')
+        . '</div>';
+}
+
+function meter_bar(string $label, $pct): string
+{
+    $value = $pct === null ? 0 : max(0, min(100, (float)$pct));
+    $tone = $value >= 85 ? 'bad' : ($value >= 70 ? 'warn' : 'ok');
+    return '<div class="meter-row ' . h($tone) . '">'
+        . '<span>' . h($label) . '</span>'
+        . '<div class="resource-meter"><i style="--w: ' . h((string)$value) . '%"></i></div>'
+        . '<strong>' . h(compact_percent($pct)) . '</strong>'
         . '</div>';
 }
 

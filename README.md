@@ -6,9 +6,12 @@ SignalOps Status is a self-hosted operations page for teams that run Discord ale
 
 ![SignalOps Status screenshot](docs/screenshot.png)
 
+The default interface uses a dark NOC-style console, with a built-in Light/Dark toggle for communities that need a brighter embed or landing-page look.
+
 ## Highlights
 
 - **PHP Based**: no Node build pipeline, no frontend framework, no external SaaS dependency.
+- Dark and light UI themes with browser-local preference storage.
 - Discord bot health cards from private `/health.json` endpoints.
 - Sanitized Discord bot error journal from systemd/journald.
 - CPU, memory, I/O wait, load, uptime, disk, services, and private-network traffic.

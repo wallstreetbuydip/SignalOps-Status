@@ -1,4 +1,24 @@
 (() => {
+  const themeToggle = document.querySelector('[data-theme-toggle]');
+  const themeLabel = document.querySelector('[data-theme-label]');
+
+  function setTheme(theme) {
+    const next = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    if (themeLabel) themeLabel.textContent = next === 'light' ? 'Theme: Light' : 'Theme: Dark';
+    if (themeToggle) themeToggle.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false');
+    try {
+      localStorage.setItem('signalops-theme', next);
+    } catch (error) {
+      // Ignore unavailable localStorage in locked-down browsers.
+    }
+  }
+
+  themeToggle?.addEventListener('click', () => {
+    setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+  setTheme(document.documentElement.dataset.theme || 'dark');
+
   const map = document.querySelector('[data-network-map]');
   if (!map) return;
 
