@@ -130,6 +130,9 @@
   });
 
   map.addEventListener('wheel', (event) => {
+    if (!event.ctrlKey && !event.metaKey) {
+      return;
+    }
     event.preventDefault();
     zoomAt(state.scale * (event.deltaY > 0 ? 0.9 : 1.1), pointFromEvent(event));
   }, { passive: false });

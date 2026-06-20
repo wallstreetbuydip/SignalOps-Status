@@ -52,6 +52,9 @@
 
 html { scroll-behavior: smooth; }
 
+html,
+body { max-width: 100%; }
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -83,7 +86,7 @@ body::before {
 .page {
   position: relative;
   z-index: 1;
-  width: min(1360px, calc(100vw - 48px));
+  width: min(1520px, calc(100vw - 48px));
   margin: 0 auto;
   padding: 26px 0 34px;
 }
@@ -103,6 +106,8 @@ body::before {
   gap: 14px;
   min-width: 0;
 }
+
+.brandline > div { min-width: 0; }
 
 .brand-mark {
   position: relative;
@@ -445,7 +450,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-top: auto;
+  margin-top: 16px;
   padding-top: 16px;
 }
 
@@ -464,7 +469,8 @@ h1 {
 .lower-grid {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 1fr 1.18fr;
+  grid-template-columns: minmax(0, 1fr) minmax(460px, 1.12fr);
+  align-items: start;
   gap: 18px;
 }
 
@@ -472,6 +478,15 @@ h1 {
 .mesh-panel {
   min-height: 420px;
   padding: 18px;
+}
+
+.mesh-panel { min-height: 0; }
+
+.right-stack {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-width: 0;
 }
 
 .server-grid {
@@ -552,6 +567,8 @@ h1 {
   padding: 9px 10px;
 }
 
+.server-meta .wide { grid-column: 1 / -1; }
+
 .server-meta strong {
   display: block;
   margin-top: 4px;
@@ -573,7 +590,7 @@ h1 {
 
 .network-map {
   position: relative;
-  min-height: 330px;
+  min-height: clamp(300px, 24vw, 390px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -584,7 +601,7 @@ h1 {
 }
 
 .network-map.is-dragging { cursor: grabbing; }
-.globe-svg { position: relative; z-index: 1; display: block; width: 100%; height: 330px; }
+.globe-svg { position: relative; z-index: 1; display: block; width: 100%; height: clamp(300px, 24vw, 390px); }
 .globe-stage { transform-box: fill-box; transform-origin: center; }
 .map-deep { fill: #071017; }
 .globe-ocean { fill: url("#ocean"); opacity: .92; }
@@ -688,14 +705,26 @@ h1 {
   font-weight: 800;
 }
 
+.latency-filter-wrap {
+  position: relative;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.latency-filter-wrap::before { content: none; }
+
 .latency-filter-bar {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
 
 .latency-filter-bar button {
+  flex: 1 1 122px;
+  min-width: 0;
   min-height: 32px;
   padding: 0 10px;
   border: 1px solid var(--line2);
@@ -704,6 +733,9 @@ h1 {
   color: var(--muted);
   font: 850 12px "Segoe UI", Arial, sans-serif;
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .latency-filter-bar button:hover,
@@ -745,16 +777,28 @@ h1 {
 .latency-row.is-hidden { display: none; }
 
 .bottom-cards {
-  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
 .info-card,
 .ops-card,
 .table-card {
   padding: 18px;
+}
+
+.right-stack .info-card { padding: 14px; }
+
+.right-stack .info-card .section-head {
+  min-height: 0;
+  margin-bottom: 8px;
+}
+
+.right-stack .table-line {
+  min-height: 34px;
+  padding: 7px 9px;
+  font-size: 12px;
 }
 
 .table-line {
@@ -849,7 +893,17 @@ footer a:hover { text-decoration: underline; }
   50% { opacity: 1; transform: scale(1.35); }
 }
 
-@media (max-width: 1180px) {
+@media (min-width: 1580px) {
+  .page {
+    width: min(1640px, calc(100vw - 72px));
+  }
+
+  .lower-grid {
+    grid-template-columns: minmax(0, 1.02fr) minmax(560px, .98fr);
+  }
+}
+
+@media (max-width: 1280px) {
   .dashboard-shell,
   .lower-grid,
   .detail-grid {
@@ -860,6 +914,12 @@ footer a:hover { text-decoration: underline; }
   .metrics-grid,
   .server-grid,
   .bottom-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .network-map,
+  .globe-svg {
+    min-height: 360px;
+    height: 360px;
+  }
 }
 
 @media (max-width: 780px) {
@@ -895,7 +955,212 @@ footer a:hover { text-decoration: underline; }
   }
 
   .hero-card h2 { font-size: 40px; }
-  .network-map { min-height: 430px; }
-  .globe-svg { height: 430px; }
+  .network-map {
+    min-height: 430px;
+    height: 430px;
+  }
+  .globe-svg {
+    min-height: 430px;
+    height: 430px;
+  }
   .latency-filter-bar { justify-content: flex-start; }
+}
+
+@media (max-width: 520px) {
+  body { min-width: 0; }
+
+  .page {
+    width: 100%;
+    padding: 14px 10px 28px;
+  }
+
+  .topbar {
+    gap: 14px;
+    padding: 0 0 16px;
+  }
+
+  .brandline {
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  h1 {
+    font-size: clamp(22px, 7.2vw, 28px);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+
+  .brandline p {
+    max-width: min(100%, 300px);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    gap: 9px;
+  }
+
+  .status-pill,
+  .capsule {
+    max-width: 100%;
+    min-height: 28px;
+    padding: 0 10px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .stamp strong { font-size: 13px; }
+
+  .panel { border-radius: 8px; }
+
+  .hero-card,
+  .overview-card,
+  .resources-panel,
+  .mesh-panel,
+  .info-card,
+  .ops-card,
+  .table-card {
+    padding: 14px;
+  }
+
+  .hero-card { min-height: 0; }
+
+  .hero-card h2 {
+    max-width: 10ch;
+    margin: 20px 0 10px;
+    font-size: clamp(32px, 9.8vw, 38px);
+    line-height: 1.03;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-card p {
+    max-width: 30ch;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-stats { margin-top: 20px; }
+
+  .hero-stats div,
+  .overview-strip div {
+    min-height: 64px;
+    padding: 11px 12px;
+  }
+
+  .section-head {
+    gap: 10px;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .section-head h2 { font-size: 15px; }
+
+  .segmented {
+    border-radius: 8px;
+    padding: 4px;
+  }
+
+  .segmented a {
+    min-width: 74px;
+    padding: 8px 10px;
+  }
+
+  .metrics-grid { gap: 10px; }
+
+  .metric-card {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .metric-card p { font-size: 32px; }
+
+  .server-card {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .server-top {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .server-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .meter-row {
+    grid-template-columns: 38px 1fr 42px;
+    gap: 8px;
+  }
+
+  .network-map {
+    min-height: 300px;
+    height: 300px;
+  }
+
+  .globe-svg {
+    min-height: 300px;
+    height: 300px;
+  }
+
+  .map-toolbar {
+    top: 10px;
+    right: 10px;
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .map-toolbar button {
+    min-width: 30px;
+    height: 30px;
+  }
+
+  .latency-detail {
+    padding: 10px;
+  }
+
+  .latency-filter-wrap {
+    padding: 7px;
+  }
+
+  .latency-filter-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    width: 100%;
+  }
+
+  .latency-filter-bar button {
+    width: 100%;
+    min-height: 34px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .latency-filter-bar button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .latency-row {
+    min-height: 44px;
+    padding: 9px 10px;
+  }
+
+  .table-line {
+    gap: 10px;
+    padding: 9px 10px;
+  }
+
+  th,
+  td {
+    padding: 9px 8px;
+    font-size: 12px;
+  }
 }
