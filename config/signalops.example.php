@@ -18,6 +18,13 @@ return [
         'stale_seconds' => 300,
         'refresh_lock_seconds' => 20,
         'browser_max_age' => 5,
+        'stale_while_revalidate' => 60,
+        'cdn' => [
+            'enabled' => false,
+            'edge_max_age' => 60,
+            'stale_while_revalidate' => 300,
+            'stale_if_error' => 604800,
+        ],
         'path' => '/var/lib/signalops-status/status-cache.json',
     ],
     'sla' => [

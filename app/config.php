@@ -24,6 +24,13 @@ function default_signalops_config(): array
             'stale_seconds' => 300,
             'refresh_lock_seconds' => 20,
             'browser_max_age' => 5,
+            'stale_while_revalidate' => 60,
+            'cdn' => [
+                'enabled' => getenv('SIGNALOPS_CDN_ENABLED') === '1',
+                'edge_max_age' => 60,
+                'stale_while_revalidate' => 300,
+                'stale_if_error' => 604800,
+            ],
             'path' => getenv('SIGNALOPS_CACHE_PATH') ?: $projectRoot . '/var/cache/status-cache.json',
         ],
         'sla' => [

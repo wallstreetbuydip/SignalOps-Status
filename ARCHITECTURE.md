@@ -62,6 +62,16 @@ flowchart TB
 3. Uncached collection gathers HTTP health, machine probes, optional MySQL summaries, ping SLA, private traffic counters, and latency links.
 4. The dashboard renders sanitized labels, metrics, relative times, and private-network status.
 
+## Edge Cache
+
+SignalOps can emit CDN-friendly response headers when `cache.cdn.enabled` is true:
+
+- `Cache-Control` with `public`, `s-maxage`, `stale-while-revalidate`, and `stale-if-error`
+- `CDN-Cache-Control`
+- `Cloudflare-CDN-Cache-Control`
+
+Cloudflare still needs a Cache Rule that marks the HTML page eligible for cache. Match only the public status hostname and ignore query strings in the cache key unless query parameters intentionally change the rendered dashboard.
+
 ## Probe Contract
 
 Remote probes return JSON:

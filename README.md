@@ -109,6 +109,7 @@ Important fields:
 | Field | Purpose |
 | --- | --- |
 | `app.demo` | Set to `false` for production. |
+| `cache.cdn.enabled` | Emit CDN-friendly headers for Cloudflare or another edge cache. |
 | `endpoints.discord.url` | Private Discord bot `/health.json`. |
 | `endpoints.api.url` | Private trading API `/health.json`. |
 | `machines[].journal_units` | systemd units to summarize in the error journal. |
@@ -116,6 +117,30 @@ Important fields:
 | `latency_map.nodes` | Display labels, cities, and fixed map coordinates. |
 | `database.summary_sql` | Optional SQL for archive summary metrics. |
 | `database.recent_sql` | Optional SQL for latest signals/events table. |
+
+## Cloudflare CDN
+
+SignalOps can sit behind Cloudflare, but Cloudflare does not cache HTML automatically. To make the public status page cacheable at the edge, enable CDN headers in private config:
+
+```php
+'cache' => [
+    'cdn' => [
+        'enabled' => true,
+        'edge_max_age' => 60,
+        'stale_while_revalidate' => 300,
+        'stale_if_error' => 604800,
+    ],
+],
+```
+
+Then add a Cloudflare Cache Rule for only the status hostname:
+
+- Cache eligibility: `Eligible for cache`
+- Origin Cache Control: respect origin headers
+- Cache key: ignore query string unless your deployment uses query parameters for different pages
+- Keep authenticated or user-specific pages outside this rule
+
+When enabled, SignalOps sends `Cache-Control`, `CDN-Cache-Control`, and `Cloudflare-CDN-Cache-Control` headers with short edge TTLs and stale-if-error protection.
 
 ## Security Notes
 
