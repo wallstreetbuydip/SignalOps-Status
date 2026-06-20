@@ -190,7 +190,7 @@ $formatCount = static function ($value): string {
         </article>
       </div>
       <div class="overview-strip">
-        <div><span>Public SLA</span><strong><?= h(sla_percent($publicSla)) ?></strong></div>
+        <div><span>Ping SLA</span><strong><?= h(sla_percent($publicSla)) ?></strong></div>
         <div><span>Median Ping</span><strong><?= h(format_latency_ms($medianLatency)) ?></strong></div>
         <div><span>Bot Journal</span><strong><?= h($botJournalLabel) ?></strong></div>
         <div><span>Data Mode</span><strong><?= h(!empty($app['demo']) ? 'Demo' : 'Live') ?></strong></div>
