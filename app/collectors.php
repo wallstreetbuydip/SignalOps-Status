@@ -21,6 +21,7 @@ function collect_status_cached(array $config): array
     $path = (string)($cache['path'] ?? '');
     $freshFor = max(1, (int)($cache['seconds'] ?? 15));
     $staleFor = max($freshFor, (int)($cache['stale_seconds'] ?? 300));
+    $serveExpiredFor = max($staleFor, (int)($cache['serve_expired_seconds'] ?? 604800));
     $lockFor = max(1, (int)($cache['refresh_lock_seconds'] ?? 20));
     if ($path === '') {
         return collect_status_uncached($config);
@@ -28,36 +29,98 @@ function collect_status_cached(array $config): array
 
     $cached = read_json_file($path);
     $age = isset($cached['_meta']['created_at']) ? time() - (int)$cached['_meta']['created_at'] : null;
-    if (is_array($cached) && $age !== null && $age <= $freshFor) {
-        $cached['_cache'] = ['state' => 'fresh'];
+    $createdAt = is_array($cached) ? (int)($cached['_meta']['created_at'] ?? 0) : 0;
+    if (is_array($cached) && $age !== null && $createdAt > 0 && $age <= $serveExpiredFor) {
+        $expired = $age > $staleFor;
+        $stale = $age > $freshFor;
+        $cached['_cache'] = [
+            'state' => $expired ? 'expired' : ($stale ? 'stale' : 'fresh'),
+            'age_seconds' => max(0, $age),
+            'created_at' => $createdAt,
+            'refresh_after_response' => false,
+        ];
+
+        if ($stale) {
+            $lockPath = status_cache_lock_path($cache, $path);
+            if (acquire_refresh_lock($lockPath, $lockFor)) {
+                $cached['_cache']['refresh_after_response'] = true;
+                $cached['_cache']['refresh_lock_path'] = $lockPath;
+            }
+        }
+
         return $cached;
     }
 
-    $lockPath = $path . '.lock';
+    $lockPath = status_cache_lock_path($cache, $path);
     if (acquire_refresh_lock($lockPath, $lockFor)) {
-        $status = collect_status_uncached($config);
-        $status['_meta'] = ['created_at' => time()];
-        write_json_file($path, $status);
-        $status['_cache'] = ['state' => 'refreshed'];
-        return $status;
+        try {
+            $status = collect_status_uncached($config);
+            $status['_meta'] = ['created_at' => time()];
+            $cacheStatus = $status;
+            unset($cacheStatus['_cache']);
+            write_json_file($path, $cacheStatus);
+            $status['_cache'] = [
+                'state' => 'miss',
+                'age_seconds' => 0,
+                'created_at' => $status['_meta']['created_at'],
+                'refresh_after_response' => false,
+            ];
+            return $status;
+        } finally {
+            release_refresh_lock($lockPath);
+        }
     }
 
-    if (is_array($cached) && $age !== null && $age <= $staleFor) {
-        $cached['_cache'] = ['state' => 'stale', 'refresh_after_response' => true, 'refresh_lock_path' => $lockPath];
-        return $cached;
-    }
-
-    return collect_status_uncached($config) + ['_cache' => ['state' => 'uncached']];
+    $status = collect_status_uncached($config);
+    $status['_cache'] = ['state' => 'uncached', 'age_seconds' => 0, 'created_at' => time()];
+    return $status;
 }
 
-function refresh_status_cache(array $config, string $lockPath): void
+function refresh_status_cache(array $config, string $lockPath = '', bool $useExistingLock = false): void
 {
-    if ($lockPath !== '' && !acquire_refresh_lock($lockPath, (int)($config['cache']['refresh_lock_seconds'] ?? 20))) {
+    if ($lockPath !== '' && !$useExistingLock && !acquire_refresh_lock($lockPath, (int)($config['cache']['refresh_lock_seconds'] ?? 20))) {
         return;
     }
-    $status = collect_status_uncached($config);
-    $status['_meta'] = ['created_at' => time()];
-    write_json_file((string)($config['cache']['path'] ?? ''), $status);
+    try {
+        $status = collect_status_uncached($config);
+        $status['_meta'] = ['created_at' => time()];
+        unset($status['_cache']);
+        write_json_file((string)($config['cache']['path'] ?? ''), $status);
+    } finally {
+        release_refresh_lock($lockPath);
+    }
+}
+
+function status_cache_lock_path(array $cache, string $path): string
+{
+    $configured = (string)($cache['refresh_lock_path'] ?? '');
+    return $configured !== '' ? $configured : $path . '.refresh.lock';
+}
+
+function spawn_status_cache_refresh(string $projectRoot, array $cache = []): bool
+{
+    if (!function_exists('shell_exec')) {
+        return false;
+    }
+
+    $script = $projectRoot . '/scripts/refresh-cache.php';
+    if (!is_file($script)) {
+        return false;
+    }
+
+    $php = trim((string)($cache['php_cli'] ?? ''));
+    if ($php === '') {
+        $php = PHP_BINARY ?: 'php';
+    }
+    if (stripos(basename($php), 'php-fpm') !== false) {
+        $php = 'php';
+    }
+
+    $command = 'nohup ' . escapeshellarg($php) . ' '
+        . escapeshellarg($script) . ' --use-existing-lock'
+        . ' > /dev/null 2>&1 & echo $!';
+
+    return trim((string)@shell_exec($command)) !== '';
 }
 
 function collect_status_uncached(array $config): array
@@ -120,7 +183,15 @@ function write_json_file(string $path, array $data): void
     if (!is_dir($dir)) {
         @mkdir($dir, 0750, true);
     }
-    @file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    $tmp = $path . '.' . getmypid() . '.tmp';
+    $payload = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if ($payload === false) {
+        return;
+    }
+    if (@file_put_contents($tmp, $payload, LOCK_EX) !== false) {
+        @rename($tmp, $path);
+        @chmod($path, 0640);
+    }
 }
 
 function acquire_refresh_lock(string $path, int $ttl): bool
@@ -136,6 +207,13 @@ function acquire_refresh_lock(string $path, int $ttl): bool
         @mkdir($dir, 0750, true);
     }
     return @file_put_contents($path, (string)time(), LOCK_EX) !== false;
+}
+
+function release_refresh_lock(string $path): void
+{
+    if ($path !== '') {
+        @unlink($path);
+    }
 }
 
 function collect_database(array $db): array

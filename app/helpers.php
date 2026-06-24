@@ -40,6 +40,12 @@ function now_iso(): string
     return date('Y-m-d H:i:s T');
 }
 
+function iso_time_attr($value): string
+{
+    $timestamp = timestamp_value($value);
+    return $timestamp === false ? '' : gmdate('c', $timestamp);
+}
+
 function timestamp_value($value)
 {
     if (!$value) {

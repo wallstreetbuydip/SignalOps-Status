@@ -1,6 +1,20 @@
 <?php
 declare(strict_types=1);
 
+function default_signalops_cache_path(string $projectRoot): string
+{
+    $configured = getenv('SIGNALOPS_CACHE_PATH');
+    if (is_string($configured) && trim($configured) !== '') {
+        return trim($configured);
+    }
+
+    if (DIRECTORY_SEPARATOR === '/' && is_dir('/dev/shm') && is_writable('/dev/shm')) {
+        return '/dev/shm/signalops-status/status-cache.json';
+    }
+
+    return $projectRoot . '/var/cache/status-cache.json';
+}
+
 function default_signalops_config(): array
 {
     $projectRoot = dirname(__DIR__);
@@ -22,16 +36,19 @@ function default_signalops_config(): array
             'enabled' => true,
             'seconds' => 15,
             'stale_seconds' => 300,
+            'serve_expired_seconds' => 604800,
             'refresh_lock_seconds' => 20,
             'browser_max_age' => 5,
             'stale_while_revalidate' => 60,
+            'php_cli' => getenv('SIGNALOPS_PHP_CLI') ?: '',
+            'refresh_lock_path' => getenv('SIGNALOPS_CACHE_LOCK_PATH') ?: '',
             'cdn' => [
                 'enabled' => getenv('SIGNALOPS_CDN_ENABLED') === '1',
                 'edge_max_age' => 60,
                 'stale_while_revalidate' => 300,
                 'stale_if_error' => 604800,
             ],
-            'path' => getenv('SIGNALOPS_CACHE_PATH') ?: $projectRoot . '/var/cache/status-cache.json',
+            'path' => default_signalops_cache_path($projectRoot),
         ],
         'sla' => [
             'enabled' => true,

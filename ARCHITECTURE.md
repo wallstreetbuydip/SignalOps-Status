@@ -60,7 +60,7 @@ flowchart TB
 ## Data Flow
 
 1. `public/index.php` loads config from `/etc/signalops-status/config.php`, `config/signalops.php`, or environment variables.
-2. The collector reads cached status when possible.
+2. The collector reads cached status when possible. Existing snapshots are served first, and stale snapshots can trigger a background refresh.
 3. Uncached collection gathers HTTP health, machine probes, optional MySQL summaries, ping SLA, private traffic counters, and latency links.
 4. The dashboard renders sanitized labels, metrics, relative times, and private-network status.
 
@@ -71,8 +71,11 @@ SignalOps can emit CDN-friendly response headers when `cache.cdn.enabled` is tru
 - `Cache-Control` with `public`, `s-maxage`, `stale-while-revalidate`, and `stale-if-error`
 - `CDN-Cache-Control`
 - `Cloudflare-CDN-Cache-Control`
+- `ETag` and `Last-Modified` for browser and edge revalidation
 
 Cloudflare still needs a Cache Rule that marks the HTML page eligible for cache. Match only the public status hostname and ignore query strings in the cache key unless query parameters intentionally change the rendered dashboard.
+
+On Linux, SignalOps can store its public JSON snapshot in `/dev/shm/signalops-status/` to avoid disk-backed cache reads. The optional systemd timer in `deploy/systemd/` can refresh the snapshot every minute so visitor requests usually render from a warm cache.
 
 ## Probe Contract
 

@@ -163,6 +163,15 @@ h1 {
   font-size: 14px;
 }
 
+.stamp small,
+.hero-stats small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 .theme-toggle {
   min-height: 32px;
   min-width: 96px;
@@ -598,6 +607,8 @@ h1 {
   box-shadow: inset 0 0 58px rgba(255,255,255,.035), inset 0 -80px 120px rgba(0,0,0,.18);
   cursor: grab;
   touch-action: none;
+  content-visibility: auto;
+  contain-intrinsic-size: 390px;
 }
 
 .network-map.is-dragging { cursor: grabbing; }

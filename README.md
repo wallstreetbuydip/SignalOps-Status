@@ -21,6 +21,7 @@ The default interface uses a dark NOC-style console, with a built-in Light/Dark 
 - Interactive point-to-point latency map with clickable server nodes.
 - Optional MySQL summary for archived trading signals or bot events.
 - Demo mode is enabled by default, so the dashboard works immediately after clone.
+- Stale-first cache with optional tmpfs snapshots, browser revalidation, and CDN-friendly headers.
 - Redacts IPs, URLs, bearer tokens, bot tokens, long IDs, and common secret patterns before rendering.
 
 ## Good Fit
@@ -114,6 +115,9 @@ Important fields:
 | Field | Purpose |
 | --- | --- |
 | `app.demo` | Set to `false` for production. |
+| `cache.path` | JSON snapshot path. Linux installs can use `/dev/shm/signalops-status/status-cache.json` for tmpfs-backed cache. |
+| `cache.serve_expired_seconds` | Keep serving an older snapshot while probes recover. |
+| `cache.php_cli` | PHP CLI binary used for background cache refresh workers. |
 | `cache.cdn.enabled` | Emit CDN-friendly headers for Cloudflare or another edge cache. |
 | `endpoints.discord.url` | Private Discord bot `/health.json`. |
 | `endpoints.api.url` | Private trading API `/health.json`. |
@@ -148,6 +152,21 @@ Then add a Cloudflare Cache Rule for only the status hostname:
 When enabled, SignalOps sends `Cache-Control`, `CDN-Cache-Control`, and `Cloudflare-CDN-Cache-Control` headers with short edge TTLs and stale-if-error protection.
 
 See [docs/cloudflare-cache-rules.md](docs/cloudflare-cache-rules.md) for the full Cloudflare setup, including the exact Cache Rule and verification commands.
+
+## Cache Warmer
+
+Production installs can keep the public snapshot hot with the optional systemd units in `deploy/systemd/`.
+
+Adjust `WorkingDirectory`, `ExecStart`, `User`, and `Group` for your server, then install:
+
+```bash
+sudo install -m 0644 deploy/systemd/signalops-status-cache.service /etc/systemd/system/signalops-status-cache.service
+sudo install -m 0644 deploy/systemd/signalops-status-cache.timer /etc/systemd/system/signalops-status-cache.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now signalops-status-cache.timer
+```
+
+The timer refreshes `scripts/refresh-cache.php` every minute. This keeps most public requests on the fast cache-read path while private probes run out of band.
 
 ## Security Notes
 

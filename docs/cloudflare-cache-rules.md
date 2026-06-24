@@ -25,6 +25,8 @@ When enabled, SignalOps sends:
 Cache-Control: public, max-age=15, s-maxage=60, stale-while-revalidate=300, stale-if-error=604800
 CDN-Cache-Control: public, max-age=60, stale-while-revalidate=300, stale-if-error=604800
 Cloudflare-CDN-Cache-Control: public, max-age=60, stale-while-revalidate=300, stale-if-error=604800
+ETag: "..."
+Last-Modified: Wed, 24 Jun 2026 07:42:36 GMT
 ```
 
 Cloudflare may consume `Cloudflare-CDN-Cache-Control`, so it might not appear in browser-facing responses after Cloudflare processes it.
@@ -77,6 +79,18 @@ Expected progression:
 ```text
 CF-Cache-Status: MISS
 CF-Cache-Status: HIT
+```
+
+Verify browser or edge revalidation:
+
+```bash
+curl -sS -o /dev/null -D - -H 'If-Modified-Since: Wed, 24 Jun 2026 07:42:36 GMT' https://status.example.com/
+```
+
+Expected result when the snapshot has not changed:
+
+```text
+HTTP/2 304
 ```
 
 Verify query strings share the same cache entry:

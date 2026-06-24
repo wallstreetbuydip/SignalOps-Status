@@ -18,6 +18,9 @@ $latencyNodes = is_array($latencyMap['nodes'] ?? null) ? $latencyMap['nodes'] : 
 $latencyLinks = is_array($latencyMap['links'] ?? null) ? $latencyMap['links'] : [];
 $cacheMeta = is_array($status['_cache'] ?? null) ? $status['_cache'] : [];
 $cacheState = strtoupper((string)($cacheMeta['state'] ?? 'live'));
+$cacheCreatedAt = max(0, (int)($cacheMeta['created_at'] ?? time()));
+$cacheCreatedIso = gmdate('c', $cacheCreatedAt);
+$clockSeedIso = gmdate('c');
 
 $machineByKey = [];
 $onlineMachines = 0;
@@ -94,9 +97,15 @@ $overallLabel = $overallTone === 'ok' ? 'All systems operational' : ($overallTon
 $formatCount = static function ($value): string {
     return is_numeric($value) ? number_format((float)$value, 0) : 'n/a';
 };
+
+$relativeStrong = static function ($value): string {
+    $text = age_text($value);
+    $iso = iso_time_attr($value);
+    return '<strong' . ($iso !== '' ? ' data-relative-time="' . h($iso) . '"' : '') . '>' . h($text) . '</strong>';
+};
 ?>
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-timezone="<?= h((string)($app['timezone'] ?? 'America/Toronto')) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -112,8 +121,8 @@ $formatCount = static function ($value): string {
       }
     })();
   </script>
-  <link rel="stylesheet" href="/assets/signalops.css?v=20260620-r2">
-  <script src="/assets/signalops-map.js?v=20260620-r2" defer></script>
+  <link rel="stylesheet" href="/assets/signalops.css?v=20260624-r1">
+  <script src="/assets/signalops-ui.js?v=20260624-r1" defer></script>
 </head>
 <body style="--brand: <?= h($theme['accent'] ?? '#22df98') ?>">
 <main class="page">
@@ -130,7 +139,7 @@ $formatCount = static function ($value): string {
         <span data-theme-label>Dark</span>
       </button>
       <div class="status-pill <?= h($overallTone) ?>"><span class="status-dot"></span><?= h($overallLabel) ?></div>
-      <div class="stamp"><span>Local time</span><strong><?= h(now_iso()) ?></strong></div>
+      <div class="stamp"><span>Local time</span><strong data-live-clock="<?= h($clockSeedIso) ?>"><?= h(now_iso()) ?></strong></div>
     </div>
   </header>
 
@@ -142,7 +151,7 @@ $formatCount = static function ($value): string {
         <p>Bot health, latency, database, and server probes at a glance.</p>
       </div>
       <div class="hero-stats">
-        <div><span>Snapshot updated</span><strong><?= h(date('H:i T')) ?></strong></div>
+        <div><span>Snapshot updated</span><strong><?= h(date('H:i T', $cacheCreatedAt)) ?></strong><small data-local-time="<?= h($cacheCreatedIso) ?>"></small></div>
         <div><span>Cache mode</span><strong><?= h($cacheState) ?></strong></div>
         <div><span>SLA window</span><strong>30 days</strong></div>
         <div><span>Probe nodes</span><strong><?= h((string)$onlineMachines) ?> online</strong></div>
@@ -164,7 +173,7 @@ $formatCount = static function ($value): string {
           <span>Archive</span>
           <h3><?= h((string)($config['database']['label'] ?? 'Database Server')) ?></h3>
           <p><?= h($formatCount($summary['event_count'] ?? null)) ?></p>
-          <div class="probe-row"><em>Latest event</em><strong><?= h(age_text($summary['latest_event_at'] ?? null)) ?></strong></div>
+          <div class="probe-row"><em>Latest event</em><?= $relativeStrong($summary['latest_event_at'] ?? null) ?></div>
           <div class="probe-row"><em>Status</em><span class="badge <?= h(status_tone($database['ok'] ?? null)) ?>"><?= h(($database['ok'] ?? null) === true ? 'OK' : (($database['ok'] ?? null) === false ? 'Error' : 'Optional')) ?></span></div>
         </article>
         <article class="metric-card">
@@ -172,20 +181,20 @@ $formatCount = static function ($value): string {
           <h3>Deduplication</h3>
           <p><?= h($formatCount($dedupeValue)) ?></p>
           <div class="probe-row"><em>Seen hashes</em><strong><?= h($dedupeValue === null ? 'n/a' : 'stable') ?></strong></div>
-          <div class="probe-row"><em>Latest import</em><strong><?= h(age_text($summary['latest_insert_at'] ?? $summary['latest_event_at'] ?? null)) ?></strong></div>
+          <div class="probe-row"><em>Latest import</em><?= $relativeStrong($summary['latest_insert_at'] ?? $summary['latest_event_at'] ?? null) ?></div>
         </article>
         <article class="metric-card">
           <span>Discord</span>
           <h3><?= h((string)($config['endpoints']['discord']['label'] ?? 'Discord Bot')) ?></h3>
           <p><?= h($formatCount($discord['seen_hashes'] ?? $discord['publish_count'] ?? null)) ?></p>
-          <div class="probe-row"><em>Last poll</em><strong><?= h(age_text($discord['last_poll_ok_at'] ?? null)) ?></strong></div>
+          <div class="probe-row"><em>Last poll</em><?= $relativeStrong($discord['last_poll_ok_at'] ?? null) ?></div>
           <div class="probe-row"><em>Status</em><span class="badge <?= h($discordDisplay['tone']) ?>"><?= h($discordDisplay['label']) ?></span></div>
         </article>
         <article class="metric-card">
           <span>Capture</span>
           <h3><?= h((string)($config['endpoints']['api']['label'] ?? 'Trading API')) ?></h3>
           <p><?= h($formatCount($api['capture_count'] ?? $api['change_count'] ?? null)) ?></p>
-          <div class="probe-row"><em>Latest capture</em><strong><?= h(age_text($api['last_capture_at'] ?? null)) ?></strong></div>
+          <div class="probe-row"><em>Latest capture</em><?= $relativeStrong($api['last_capture_at'] ?? null) ?></div>
           <div class="probe-row"><em>Status</em><span class="badge <?= h($apiDisplay['tone']) ?>"><?= h($apiDisplay['label']) ?></span></div>
         </article>
       </div>
@@ -337,7 +346,7 @@ $formatCount = static function ($value): string {
             <div class="section-head bare"><h2>Discord Error Journal</h2><span class="badge <?= h($botJournalTone) ?>"><?= h($botJournalLabel) ?></span></div>
             <div class="table-line"><span>Warnings / 24h</span><strong><?= h((string)(int)($botJournal['warning_count'] ?? 0)) ?></strong></div>
             <div class="table-line"><span>Errors / 24h</span><strong><?= h((string)(int)($botJournal['error_count'] ?? 0)) ?></strong></div>
-            <div class="table-line"><span>Latest entry</span><strong><?= h(age_text($botJournal['latest_at'] ?? null)) ?></strong></div>
+            <div class="table-line"><span>Latest entry</span><?= $relativeStrong($botJournal['latest_at'] ?? null) ?></div>
             <?php $journalEntries = is_array($botJournal['latest'] ?? null) ? $botJournal['latest'] : []; ?>
             <?php if ($journalEntries): ?>
               <div class="journal-list">
@@ -383,10 +392,10 @@ $formatCount = static function ($value): string {
       <div class="section-head"><h2>Runtime Details</h2></div>
       <div class="table-line"><span>Discord poll count</span><strong class="mono"><?= h($discord['poll_count'] ?? 'n/a') ?></strong></div>
       <div class="table-line"><span>Discord publish count</span><strong class="mono"><?= h($discord['publish_count'] ?? 'n/a') ?></strong></div>
-      <div class="table-line"><span>Bot last event</span><strong><?= h(age_text($discord['last_event_at'] ?? null)) ?></strong></div>
+      <div class="table-line"><span>Bot last event</span><?= $relativeStrong($discord['last_event_at'] ?? null) ?></div>
       <div class="table-line"><span>API change count</span><strong class="mono"><?= h($api['change_count'] ?? 'n/a') ?></strong></div>
       <div class="table-line"><span>API HTTP</span><strong><?= h((string)($apiHealth['http_code'] ?? 'n/a')) ?></strong></div>
-      <div class="table-line"><span>API latest capture</span><strong><?= h(age_text($api['last_capture_at'] ?? null)) ?></strong></div>
+      <div class="table-line"><span>API latest capture</span><?= $relativeStrong($api['last_capture_at'] ?? null) ?></div>
     </article>
   </section>
 
