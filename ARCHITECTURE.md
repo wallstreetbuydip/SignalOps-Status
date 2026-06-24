@@ -77,6 +77,8 @@ Cloudflare still needs a Cache Rule that marks the HTML page eligible for cache.
 
 On Linux, SignalOps can store its public JSON snapshot in `/dev/shm/signalops-status/` to avoid disk-backed cache reads. The optional systemd timer in `deploy/systemd/` can refresh the snapshot every minute so visitor requests usually render from a warm cache.
 
+Authenticated operator pages should not share this edge-cache model. Keep private journals and diagnostics on `no-store` responses, then optimize origin work with lightweight list queries, selected-row detail loading, and short server-side private caches. See [docs/private-operator-pages.md](docs/private-operator-pages.md).
+
 ## Probe Contract
 
 Remote probes return JSON:

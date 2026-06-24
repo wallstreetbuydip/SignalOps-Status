@@ -22,6 +22,7 @@ The default interface uses a dark NOC-style console, with a built-in Light/Dark 
 - Optional MySQL summary for archived trading signals or bot events.
 - Demo mode is enabled by default, so the dashboard works immediately after clone.
 - Stale-first cache with optional tmpfs snapshots, browser revalidation, and CDN-friendly headers.
+- Private operator-page guidance for authenticated journals or diagnostics without unsafe CDN caching.
 - Redacts IPs, URLs, bearer tokens, bot tokens, long IDs, and common secret patterns before rendering.
 
 ## Good Fit
@@ -152,6 +153,8 @@ Then add a Cloudflare Cache Rule for only the status hostname:
 When enabled, SignalOps sends `Cache-Control`, `CDN-Cache-Control`, and `Cloudflare-CDN-Cache-Control` headers with short edge TTLs and stale-if-error protection.
 
 See [docs/cloudflare-cache-rules.md](docs/cloudflare-cache-rules.md) for the full Cloudflare setup, including the exact Cache Rule and verification commands.
+
+If you extend SignalOps with authenticated journals or internal diagnostics, keep those routes outside CDN caching and use an origin-side performance model instead. See [docs/private-operator-pages.md](docs/private-operator-pages.md).
 
 ## Cache Warmer
 

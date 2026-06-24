@@ -111,5 +111,6 @@ CF-Cache-Status: HIT
 - Apply the rule only to the public status hostname.
 - Do not use this rule for authenticated dashboards.
 - Do not cache pages that set user-specific cookies.
+- For authenticated operator pages, use `Cache-Control: no-store` and origin-side performance work instead of edge caching. See [private operator pages](private-operator-pages.md).
 - Keep private health endpoints, IPs, database credentials, SSH keys, and tokens out of the rendered HTML.
 - Keep real config outside the repository.
