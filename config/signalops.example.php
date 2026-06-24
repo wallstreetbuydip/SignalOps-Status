@@ -14,17 +14,17 @@ return [
     ],
     'cache' => [
         'enabled' => true,
-        'seconds' => 15,
+        'seconds' => 90,
         'stale_seconds' => 300,
         'serve_expired_seconds' => 604800,
-        'refresh_lock_seconds' => 20,
+        'refresh_lock_seconds' => 85,
         'browser_max_age' => 5,
-        'stale_while_revalidate' => 60,
+        'stale_while_revalidate' => 300,
         'php_cli' => '/usr/bin/php',
         'refresh_lock_path' => '/dev/shm/signalops-status/status-cache.refresh.lock',
         'cdn' => [
             'enabled' => false,
-            'edge_max_age' => 60,
+            'edge_max_age' => 90,
             'stale_while_revalidate' => 300,
             'stale_if_error' => 604800,
         ],
@@ -87,6 +87,8 @@ return [
             'sla_host' => 'DATABASE_PRIVATE_HOST',
             'user' => 'root',
             'key_file' => '/etc/signalops-status/status_probe_ed25519',
+            'ssh_timeout_seconds' => 4,
+            'ssh_connect_timeout_seconds' => 2,
             'latency_targets' => [
                 'web' => 'WEB_PRIVATE_HOST',
                 'discord' => 'DISCORD_BOT_PRIVATE_HOST',
@@ -105,6 +107,8 @@ return [
             'sla_host' => 'DISCORD_BOT_PRIVATE_HOST',
             'user' => 'root',
             'key_file' => '/etc/signalops-status/status_probe_ed25519',
+            'ssh_timeout_seconds' => 4,
+            'ssh_connect_timeout_seconds' => 2,
             'latency_targets' => [
                 'web' => 'WEB_PRIVATE_HOST',
                 'db' => 'DATABASE_PRIVATE_HOST',
@@ -124,6 +128,8 @@ return [
             'sla_host' => 'TRADING_API_PRIVATE_HOST',
             'user' => 'root',
             'key_file' => '/etc/signalops-status/status_probe_ed25519',
+            'ssh_timeout_seconds' => 4,
+            'ssh_connect_timeout_seconds' => 2,
             'latency_targets' => [
                 'web' => 'WEB_PRIVATE_HOST',
                 'db' => 'DATABASE_PRIVATE_HOST',

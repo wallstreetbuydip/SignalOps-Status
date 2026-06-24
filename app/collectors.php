@@ -130,24 +130,7 @@ function collect_status_uncached(array $config): array
         $endpoints[$key] = fetch_json_endpoint((string)($endpoint['url'] ?? ''));
     }
 
-    $machines = [];
-    foreach (($config['machines'] ?? []) as $machine) {
-        $kind = (string)($machine['kind'] ?? 'ssh');
-        if ($kind === 'local') {
-            $probe = local_probe($machine);
-        } elseif ($kind === 'endpoint') {
-            $probe = endpoint_machine_probe($endpoints[$machine['endpoint_key'] ?? ''] ?? null);
-        } else {
-            $probe = ssh_probe($machine);
-        }
-        $machines[] = [
-            'key' => $machine['key'] ?? '',
-            'label' => $machine['label'] ?? ($machine['key'] ?? 'Server'),
-            'role' => $machine['role'] ?? '',
-            'location' => $machine['location'] ?? '',
-            'probe' => $probe,
-        ];
-    }
+    $machines = collect_machine_probes($config['machines'] ?? [], $endpoints);
 
     if (!empty($config['sla']['enabled'])) {
         $machines = apply_ping_sla($machines, $config['machines'] ?? [], (string)($config['sla']['path'] ?? ''), (int)($config['sla']['ping_timeout_seconds'] ?? 1));
@@ -447,16 +430,72 @@ function journal_summary(array $units): array
     return ['ok' => true, 'window' => '24h', 'warning_count' => $warningCount, 'error_count' => $errorCount, 'latest_at' => $latest ? $latest[count($latest) - 1]['time'] : null, 'latest' => $latest];
 }
 
-function ssh_probe(array $machine): array
+function collect_machine_probes(array $machineConfigs, array $endpoints): array
 {
-    if (empty($machine['host']) || empty($machine['user']) || empty($machine['key_file']) || !function_exists('shell_exec')) {
-        return empty_probe(null, 'SSH probe not configured');
+    $machines = [];
+    $pending = [];
+
+    foreach ($machineConfigs as $index => $machine) {
+        if (!is_array($machine)) {
+            continue;
+        }
+
+        $kind = (string)($machine['kind'] ?? 'ssh');
+        $machines[$index] = [
+            'key' => $machine['key'] ?? '',
+            'label' => $machine['label'] ?? ($machine['key'] ?? 'Server'),
+            'role' => $machine['role'] ?? '',
+            'location' => $machine['location'] ?? '',
+            'probe' => empty_probe(null, 'Probe pending'),
+        ];
+
+        if ($kind === 'ssh' && function_exists('proc_open')) {
+            $command = ssh_probe_command($machine);
+            if (is_array($command)) {
+                $process = start_ssh_probe_process($command['cmd']);
+                if ($process !== null) {
+                    $pending[$index] = [
+                        'process' => $process['process'],
+                        'pipe' => $process['pipe'],
+                        'output' => '',
+                        'deadline' => microtime(true) + (float)$command['timeout_seconds'] + 1.0,
+                    ];
+                    continue;
+                }
+            }
+        }
+
+        if ($kind === 'local') {
+            $probe = local_probe($machine);
+        } elseif ($kind === 'endpoint') {
+            $probe = endpoint_machine_probe($endpoints[$machine['endpoint_key'] ?? ''] ?? null);
+        } else {
+            $probe = ssh_probe($machine);
+        }
+        $machines[$index]['probe'] = $probe;
+    }
+
+    foreach (finish_ssh_probe_processes($pending) as $index => $probe) {
+        if (isset($machines[$index])) {
+            $machines[$index]['probe'] = $probe;
+        }
+    }
+
+    ksort($machines);
+    return array_values($machines);
+}
+
+function ssh_probe_command(array $machine): ?array
+{
+    if (empty($machine['host']) || empty($machine['user']) || empty($machine['key_file'])) {
+        return null;
     }
 
     $script = base64_encode(remote_probe_script());
     $disks = implode(':', $machine['disks'] ?? ['/']);
     $services = implode(',', $machine['services'] ?? []);
-    $latencyTargets = base64_encode(json_encode($machine['latency_targets'] ?? [], JSON_UNESCAPED_SLASHES) ?: '{}');
+    $collectLatencies = (bool)($machine['collect_latencies'] ?? false);
+    $latencyTargets = base64_encode(json_encode($collectLatencies ? ($machine['latency_targets'] ?? []) : [], JSON_UNESCAPED_SLASHES) ?: '{}');
     $journalUnits = base64_encode(json_encode($machine['journal_units'] ?? [], JSON_UNESCAPED_SLASHES) ?: '[]');
     $remote = 'PROBE_DISKS=' . escapeshellarg($disks)
         . ' PROBE_SERVICES=' . escapeshellarg($services)
@@ -464,11 +503,87 @@ function ssh_probe(array $machine): array
         . ' PROBE_JOURNAL_UNITS_B64=' . escapeshellarg($journalUnits)
         . ' bash -lc ' . escapeshellarg('echo ' . $script . ' | base64 -d | bash');
     $target = $machine['user'] . '@' . $machine['host'];
-    $cmd = 'timeout 8s ssh -i ' . escapeshellarg($machine['key_file'])
-        . ' -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/signalops-known-hosts -o ConnectTimeout=5 '
+    $timeoutSeconds = max(2, min(8, (int)($machine['ssh_timeout_seconds'] ?? 4)));
+    $connectTimeoutSeconds = max(1, min($timeoutSeconds, (int)($machine['ssh_connect_timeout_seconds'] ?? 2)));
+    $cmd = 'timeout ' . escapeshellarg((string)$timeoutSeconds . 's') . ' ssh -i ' . escapeshellarg($machine['key_file'])
+        . ' -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/signalops-known-hosts -o ConnectTimeout=' . escapeshellarg((string)$connectTimeoutSeconds) . ' '
         . escapeshellarg($target) . ' ' . escapeshellarg($remote) . ' 2>/dev/null';
-    $data = json_decode((string)@shell_exec($cmd), true);
+    return ['cmd' => $cmd, 'timeout_seconds' => $timeoutSeconds];
+}
+
+function ssh_probe(array $machine): array
+{
+    $command = ssh_probe_command($machine);
+    if ($command === null) {
+        return empty_probe(null, 'SSH probe not configured');
+    }
+    if (!function_exists('shell_exec')) {
+        return empty_probe(null, 'shell_exec disabled');
+    }
+    return parse_ssh_probe_output((string)@shell_exec($command['cmd']));
+}
+
+function parse_ssh_probe_output(string $raw): array
+{
+    $data = json_decode($raw, true);
     return is_array($data) ? $data : empty_probe(false, 'Remote probe failed');
+}
+
+function start_ssh_probe_process(string $cmd): ?array
+{
+    $descriptors = [
+        1 => ['pipe', 'w'],
+    ];
+    $process = @proc_open($cmd, $descriptors, $pipes);
+    if (!is_resource($process) || !isset($pipes[1]) || !is_resource($pipes[1])) {
+        if (is_resource($process)) {
+            @proc_close($process);
+        }
+        return null;
+    }
+    stream_set_blocking($pipes[1], false);
+    return ['process' => $process, 'pipe' => $pipes[1]];
+}
+
+function finish_ssh_probe_processes(array $pending): array
+{
+    $results = [];
+    while ($pending !== []) {
+        $now = microtime(true);
+        foreach ($pending as $index => $item) {
+            $pipe = $item['pipe'];
+            if (is_resource($pipe)) {
+                $pending[$index]['output'] .= (string)stream_get_contents($pipe);
+            }
+
+            $status = @proc_get_status($item['process']);
+            $running = is_array($status) ? (bool)($status['running'] ?? false) : false;
+            $expired = $now >= (float)$item['deadline'];
+            if ($running && !$expired) {
+                continue;
+            }
+
+            if ($running && $expired) {
+                @proc_terminate($item['process']);
+            }
+            if (is_resource($pipe)) {
+                $pending[$index]['output'] .= (string)stream_get_contents($pipe);
+                @fclose($pipe);
+            }
+            @proc_close($item['process']);
+
+            $results[$index] = $expired
+                ? empty_probe(false, 'Remote probe timed out')
+                : parse_ssh_probe_output((string)$pending[$index]['output']);
+            unset($pending[$index]);
+        }
+
+        if ($pending !== []) {
+            usleep(20000);
+        }
+    }
+
+    return $results;
 }
 
 function remote_probe_script(): string
@@ -649,7 +764,7 @@ function fetch_json_endpoint(string $url): array
     if ($url === '') {
         return ['ok' => null, 'http_code' => null, 'data' => null, 'error' => 'Endpoint not configured'];
     }
-    $context = stream_context_create(['http' => ['timeout' => 5, 'ignore_errors' => true]]);
+    $context = stream_context_create(['http' => ['timeout' => 2, 'ignore_errors' => true]]);
     $raw = @file_get_contents($url, false, $context);
     $headers = $http_response_header ?? [];
     $code = null;
